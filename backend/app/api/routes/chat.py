@@ -3,10 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.core.tenancy import bind_tenant
 from app.schemas.chat import ChatRequest, ChatResponse, SourceCitation
 from app.services.chat_service import retrieve_relevant_chunks, generate_answer
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(bind_tenant)])
 
 
 @router.post("/", response_model=ChatResponse)

@@ -153,6 +153,8 @@ Lo que implementé:
 
 Cada fila de `Document` y `DocumentChunk` lleva un `tenant_id` — el `org_id` de Clerk para cuentas de organización, o el `user_id` para cuentas individuales. El backend lo deriva del JWT verificado en cada request; el cliente nunca lo envía. Conocer el ID de un documento no alcanza — el filtro de tenant se aplica a nivel SQL en cada lectura.
 
+Como red de defensa en profundidad, Postgres aplica Row-Level Security sobre ambas tablas (`backend/sql/rls.sql`): el backend fija un GUC `app.tenant_id` por transacción y las policies filtran cada fila contra ese valor. Incluso una query que olvide el `WHERE tenant_id` no puede leer ni escribir filas de otro tenant — la base de datos lo impide.
+
 ### Procesamiento async de documentos
 
 Procesar un PDF y convertirlo en embeddings puede tardar entre 10 y 30 segundos. El endpoint de upload devuelve `202 Accepted` inmediatamente después de guardar el metadata, y el procesamiento real corre como un `BackgroundTask` de FastAPI. El frontend hace polling cada 5 segundos y actualiza el badge de estado (`pending → processing → ready`). Los errores de procesamiento quedan capturados en el registro del documento sin romper el upload.
@@ -192,7 +194,7 @@ WITH (lists = 100);
 - Cuenta de [Clerk](https://clerk.com) · Proyecto de [Supabase](https://supabase.com) · API key de [OpenAI](https://platform.openai.com)
 
 ### Base de datos
-Ejecutar `backend/sql/init.sql` en el SQL Editor de Supabase para habilitar pgvector y crear el schema.
+Ejecutar en el SQL Editor de Supabase, en orden: `backend/sql/init.sql` (habilita pgvector y crea el schema) y luego `backend/sql/rls.sql` (activa Row-Level Security como red de aislamiento entre tenants). Los comentarios de `rls.sql` incluyen cómo verificar que el rol de conexión no haga bypass de RLS.
 
 ### Frontend
 ```bash
