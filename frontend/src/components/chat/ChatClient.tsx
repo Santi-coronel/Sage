@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { sendChatMessage } from "@/lib/api";
 import { Send, BookOpen } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -92,7 +93,13 @@ export default function ChatClient() {
                   : "bg-white border border-gray-200 text-gray-800 rounded-bl-sm"
               }`}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              {msg.role === "assistant" ? (
+                <div className="text-sm leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_strong]:font-semibold [&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[0.85em] [&_a]:text-brand [&_a]:underline">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              )}
 
               {msg.sources && msg.sources.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
