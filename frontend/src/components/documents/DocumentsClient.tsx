@@ -112,7 +112,7 @@ export default function DocumentsClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Documentos</h1>
           <p className="text-gray-500 mt-1">Subí tus documentos para empezar a hacer preguntas.</p>
