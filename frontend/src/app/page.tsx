@@ -72,8 +72,8 @@ export default async function HomePage() {
             <Image
               src="/sage-demo.png"
               alt="Sage respondiendo una pregunta con citas desde documentos subidos"
-              width={1902}
-              height={1096}
+              width={1280}
+              height={800}
               priority
               className="h-auto w-full"
             />
