@@ -13,10 +13,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const description =
+  "Tu asistente de IA privado, entrenado con los documentos de tu empresa. Subí PDFs y archivos de texto, y obtené respuestas con citas a la fuente.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sage-nu-six.vercel.app"),
   title: "Sage — Asistente de conocimiento",
-  description:
-    "Tu asistente de IA privado, entrenado con los documentos de tu empresa. Subí PDFs y archivos de texto, y obtené respuestas con citas a la fuente.",
+  description,
+  openGraph: {
+    title: "Sage — Asistente de conocimiento",
+    description,
+    url: "/",
+    siteName: "Sage",
+    locale: "es_AR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sage — Asistente de conocimiento",
+    description,
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +43,7 @@ export default function RootLayout({
   return (
     <ClerkProvider afterSignOutUrl="/">
       <html
-        lang="en"
+        lang="es"
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col bg-gray-50">{children}</body>
