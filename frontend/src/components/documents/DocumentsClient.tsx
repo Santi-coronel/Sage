@@ -158,6 +158,12 @@ export default function DocumentsClient() {
           icon={FileText}
           title="Sin documentos todavía"
           description="Subí un PDF o TXT para empezar"
+          action={
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <Upload className="w-4 h-4" />
+              Subir documento
+            </Button>
+          }
         />
       ) : (
         <Card className="divide-y divide-gray-100">
