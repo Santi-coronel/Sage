@@ -16,6 +16,16 @@ Sage es un sistema RAG completo: subís tus documentos, y tenés un asistente qu
 
 ---
 
+## Capturas
+
+| Landing | Sign-in |
+|:---:|:---:|
+| ![Landing de Sage](frontend/public/landing.png) | ![Inicio de sesión con Clerk](frontend/public/sign-in.png) |
+| **Documentos** | **Chat con citas** |
+| ![Gestión de documentos con estados de procesamiento](frontend/public/documents.png) | ![Chat respondiendo con citas a la fuente exacta](frontend/public/chat.png) |
+
+---
+
 ## Arquitectura
 
 ```mermaid
