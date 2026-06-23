@@ -1,8 +1,21 @@
-# Normalize line endings
-* text=auto
-*.py text eol=lf
-*.ts text eol=lf
-*.tsx text eol=lf
-*.json text eol=lf
-*.md text eol=lf
-*.sql text eol=lf
+# Normalize line endings: store text as LF in the repo and check it out as LF
+# everywhere. This covers every text file (the previous `* text=auto` left
+# .css/.js/.gitignore etc. to core.autocrlf, which produced CRLF on Windows
+# and the "LF will be replaced by CRLF" warnings).
+* text=auto eol=lf
+
+# Windows-only scripts must keep CRLF if any are ever added.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets — never normalize or diff as text.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
