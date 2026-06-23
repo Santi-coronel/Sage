@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sage — Knowledge Assistant",
-  description: "Your company's private AI assistant, trained on your own documents.",
+  title: "Sage — Asistente de conocimiento",
+  description:
+    "Tu asistente de IA privado, entrenado con los documentos de tu empresa. Subí PDFs y archivos de texto, y obtené respuestas con citas a la fuente.",
 };
 
 export default function RootLayout({

@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { uploadDocument, getDocuments, deleteDocument } from "@/lib/api";
-import { FileText, Trash2, Upload, AlertCircle, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { FileText, Trash2, Upload, CheckCircle, Clock, Loader2, AlertCircle } from "lucide-react";
+import { buttonClasses, Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type DocumentStatus = "pending" | "processing" | "ready" | "error";
 
@@ -19,10 +26,10 @@ interface Document {
 }
 
 const statusConfig: Record<DocumentStatus, { icon: React.ElementType; label: string; className: string }> = {
-  pending: { icon: Clock, label: "Pendiente", className: "text-amber-600 bg-amber-50" },
-  processing: { icon: Loader2, label: "Procesando", className: "text-blue-600 bg-blue-50" },
-  ready: { icon: CheckCircle, label: "Listo", className: "text-emerald-600 bg-emerald-50" },
-  error: { icon: AlertCircle, label: "Error", className: "text-red-600 bg-red-50" },
+  pending: { icon: Clock, label: "Pendiente", className: "text-amber-700 bg-amber-50" },
+  processing: { icon: Loader2, label: "Procesando", className: "text-blue-700 bg-blue-50" },
+  ready: { icon: CheckCircle, label: "Listo", className: "text-emerald-700 bg-emerald-50" },
+  error: { icon: AlertCircle, label: "Error", className: "text-red-700 bg-red-50" },
 };
 
 function formatBytes(bytes: number): string {
@@ -34,27 +41,40 @@ function formatBytes(bytes: number): string {
 export default function DocumentsClient() {
   const { getToken } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Document | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadDocuments = useCallback(async () => {
-    try {
-      const token = await getToken();
-      if (!token) return;
-      const data = await getDocuments(token);
-      setDocuments(data.documents);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error al cargar documentos");
-    }
+  // Pure fetch — no setState — so it's safe to call from the effect below.
+  const fetchDocs = useCallback(async (): Promise<Document[] | null> => {
+    const token = await getToken();
+    if (!token) return null;
+    const data = await getDocuments(token);
+    return data.documents;
   }, [getToken]);
 
   useEffect(() => {
-    loadDocuments();
+    let active = true;
+    async function load() {
+      try {
+        const docs = await fetchDocs();
+        if (active && docs) setDocuments(docs);
+      } catch (e: unknown) {
+        if (active) setError(e instanceof Error ? e.message : "Error al cargar documentos");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    load();
     // Poll every 5s to update processing status
-    const interval = setInterval(loadDocuments, 5000);
-    return () => clearInterval(interval);
-  }, [loadDocuments]);
+    const interval = setInterval(load, 5000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [fetchDocs]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -66,7 +86,8 @@ export default function DocumentsClient() {
       const token = await getToken();
       if (!token) throw new Error("No autenticado");
       await uploadDocument(file, token);
-      await loadDocuments();
+      const docs = await fetchDocs();
+      if (docs) setDocuments(docs);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error al subir");
     } finally {
@@ -75,13 +96,15 @@ export default function DocumentsClient() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("¿Eliminar este documento? Esta acción no se puede deshacer.")) return;
+  async function confirmDelete() {
+    const doc = pendingDelete;
+    setPendingDelete(null);
+    if (!doc) return;
     try {
       const token = await getToken();
       if (!token) return;
-      await deleteDocument(id, token);
-      setDocuments((prev) => prev.filter((d) => d.id !== id));
+      await deleteDocument(doc.id, token);
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error al eliminar");
     }
@@ -89,7 +112,7 @@ export default function DocumentsClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Documentos</h1>
           <p className="text-gray-500 mt-1">Subí tus documentos para empezar a hacer preguntas.</p>
@@ -102,10 +125,11 @@ export default function DocumentsClient() {
             onChange={handleFileChange}
             className="hidden"
             id="file-upload"
+            disabled={uploading}
           />
           <label
             htmlFor="file-upload"
-            className={`flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg cursor-pointer font-medium text-sm transition-colors ${uploading ? "opacity-60 pointer-events-none" : ""}`}
+            className={buttonClasses("primary", "md", uploading ? "opacity-60 pointer-events-none cursor-default" : "cursor-pointer")}
           >
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {uploading ? "Subiendo..." : "Subir documento"}
@@ -113,49 +137,81 @@ export default function DocumentsClient() {
         </div>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} />}
 
-      {documents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-gray-200 rounded-xl">
-          <FileText className="w-12 h-12 text-gray-300 mb-4" />
-          <p className="text-gray-500 font-medium">Sin documentos todavía</p>
-          <p className="text-gray-400 text-sm mt-1">Subí un PDF o TXT para empezar</p>
-        </div>
+      {loading ? (
+        <Card className="divide-y divide-gray-100">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-4 p-4">
+              <Skeleton className="w-8 h-8 rounded-lg flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+          ))}
+        </Card>
+      ) : documents.length === 0 ? (
+        <EmptyState
+          className="py-20 border-2 border-dashed border-gray-200 rounded-xl"
+          icon={FileText}
+          title="Sin documentos todavía"
+          description="Subí un PDF o TXT para empezar"
+        />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+        <Card className="divide-y divide-gray-100">
           {documents.map((doc) => {
             const { icon: StatusIcon, label, className } = statusConfig[doc.status];
             return (
-              <div key={doc.id} className="flex items-center gap-4 p-4">
-                <FileText className="w-8 h-8 text-gray-400 flex-shrink-0" />
+              <div key={doc.id} className="flex items-center gap-4 p-4 transition-colors hover:bg-gray-50">
+                <FileText className="w-8 h-8 text-gray-400 flex-shrink-0" aria-hidden="true" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 truncate">{doc.name}</p>
-                  <p className="text-sm text-gray-400 mt-0.5">
+                  <p className="text-sm text-gray-500 mt-0.5">
                     {formatBytes(doc.file_size)}
                     {doc.status === "ready" && ` · ${doc.chunk_count} chunks`}
                   </p>
+                  {doc.status === "error" && doc.error_message && (
+                    <p className="text-xs text-red-600 mt-1 line-clamp-1" title={doc.error_message}>
+                      {doc.error_message}
+                    </p>
+                  )}
                 </div>
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${className}`}>
-                  <StatusIcon className={`w-3.5 h-3.5 ${doc.status === "processing" ? "animate-spin" : ""}`} />
-                  {label}
-                </div>
-                <button
-                  onClick={() => handleDelete(doc.id)}
-                  className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                <Badge
+                  icon={StatusIcon}
+                  label={label}
+                  className={className}
+                  spin={doc.status === "processing"}
+                />
+                <Button
+                  variant="ghostDanger"
+                  size="icon"
+                  onClick={() => setPendingDelete(doc)}
+                  aria-label={`Eliminar ${doc.name}`}
                   title="Eliminar documento"
                 >
                   <Trash2 className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
             );
           })}
-        </div>
+        </Card>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="¿Eliminar documento?"
+        description={
+          pendingDelete
+            ? `Se eliminará "${pendingDelete.name}" y sus fragmentos. Esta acción no se puede deshacer.`
+            : undefined
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

@@ -1,11 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  // Clerk token injected from the client — see useAuth()
-  // This helper is used inside fetch calls that pass the token explicitly.
-  return { "Content-Type": "application/json" };
-}
-
 export async function fetchWithAuth(path: string, token: string, options: RequestInit = {}) {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
